@@ -8,7 +8,15 @@ import connectDB from './db/index.js';
 // dotenv.config({ path: './env' }); 
 
 // 2nd way to connect to MongoDB and it is recommended to use this way
- connectDB()
+connectDB()
+.then(()=>{ //returnng promise due to async function
+    app.listen(process.env.PORT || 8000,()=>{
+        console.log(`Server is running at ${process.env.PORT}`)
+    })
+})
+.catch((error)=>{
+  console.error("ERORR TO CONNECT",error);
+})
 
 //first way to connect to MongoDB but it is not recommended to use this way
 /*
