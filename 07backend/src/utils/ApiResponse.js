@@ -1,3 +1,5 @@
+//class to define a standard API response structure
+
 class ApiResponse {
     constructor(statusCode, data, message = "Success"){
         this.statusCode = statusCode
