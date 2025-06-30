@@ -2,7 +2,7 @@
 // asyncHandler.js is created to wrap async functions in Express.js to handle errors properly,and it is a common pattern to avoid repetitive try-catch blocks in route handlers. 
 
 //2nd way to handle async errors in express
-const asyncHandler = (requestHandler) => {
+const asyncHandler = (requestHandler) => { 
     return (req, res, next) => {
         Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err))
     }
