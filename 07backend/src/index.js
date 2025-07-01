@@ -1,15 +1,17 @@
 import express from "express"
-const app=express();
-
-
-//require('dotenv').config({path: './env'}); 
+import cookieParser from "cookie-parser"
 import 'dotenv/config'; 
 
 // import mongoose from 'mongoose';
 // import { DB_NAME } from './constants.js';
 import connectDB from './db/index.js';
 
-// dotenv.config({ path: './.env' }); 
+const app=express();
+
+// Middlewares
+app.use(express.json({limit: '16kb'}))
+app.use(express.urlencoded({extended: true}))
+app.use(cookieParser())
 
 // 2nd way to connect to MongoDB and it is recommended to use this way
 connectDB()
@@ -21,8 +23,6 @@ connectDB()
 .catch((error)=>{
   console.error("ERORR TO CONNECT",error);
 })
-
-app.use(express.json({limit:'16kb'})); // Middleware to parse JSON bodies,taking care of JSON data in requests
 
 // Importing routes
 import { userRouter } from './routes/user.routes.js';  

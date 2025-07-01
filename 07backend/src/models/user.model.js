@@ -64,8 +64,9 @@ userSchema.pre('save',async function(next){ //pre is the hook that runs before s
     next(); //proceed to the next middleware
 })
 
-userSchema.methods.isPasswordCorrect=async function(enteredPassword){ //method to compare the entered password with the hashed password
-    return await bcrypt.compare(enteredPassword,this.password);//this.password is the hashed password stored in the database
+userSchema.methods.isPasswordCorrect = async function(password) {
+    if (!password) return false;
+    return await bcrypt.compare(password, this.password);
 }
 
 userSchema.methods.generateAccessToken= function(){ //method to generate access token

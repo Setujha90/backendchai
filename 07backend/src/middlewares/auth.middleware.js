@@ -1,7 +1,8 @@
-import { asyncHandler } from "../utils/asyncHandler";
-import { ApiError } from "../utils/ApiError";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
 import jwt from "jsonwebtoken";
-import User from "../models/user.model.js"; 
+import { User } from "../models/user.model.js";  
+
 //we are going to create our own middleware to verify JWT token ,whether user is authenticated or not
 export const verifyJWT = asyncHandler(async (req, res, next) =>{ 
       try {
@@ -11,18 +12,21 @@ export const verifyJWT = asyncHandler(async (req, res, next) =>{
              throw new ApiError(401,"Unauthorized request")
          }
            //verifying the token
-           const decodedToken= jwt.verify(token, process.env.JWT_SECRET)
+           const decodedToken= jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
   
-           const user= await User.findById(decodedToken._id).select("-password -refreshToken"); //finding the user by id and excluding password and refreshToken fields from the result
+           const user= await User.findById(decodedToken?._id).select("-password -refreshToken"); //finding the user by id and excluding password and refreshToken fields from the result
   
               if(!user){
-                  throw new ApiError(401,"Invalid access token ")
+                  throw new ApiError(401,"Invalid Access Token")
               }
   
               req.user = user; //attaching the user to the request object so that it can be accessed in the next middleware or route handler
               next();
       } catch (error) {
-        throw new ApiError(401, error?.message || "Unauthorized request"); //if any error occurs, throw an ApiError with status code 401 and the error message
+        throw new ApiError(
+            401, 
+            error?.message || "Invalid access token"
+        ) //if any error occurs, throw an ApiError with status code 401 and the error message
         
       }
  })
