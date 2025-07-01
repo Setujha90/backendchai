@@ -28,9 +28,9 @@ app.use(express.json({limit:'16kb'})); // Middleware to parse JSON bodies,taking
 import { userRouter } from './routes/user.routes.js';  
 
 
-app.get('/',(req,res)=>{
-    res.send("user login")
-})
+// app.get('/',(req,res)=>{
+//     res.send("user login")
+// })
 
 //routes declaration
 //here we can't use app.get() becuse initially we are defining the routes in this file but now we are importing the routes from user.routes.js file ,so we need to use middleware 

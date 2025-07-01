@@ -4,6 +4,21 @@ import {User} from "../models/user.model.js"; // Importing User model to interac
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 
+//Create function to generate access and refresh token
+ const generateaccessandrefreshToken=async(userId)=>{
+    try{
+       const user= await User.findById(userId)
+       const accessToken=user.generateAccessToken()
+       const refreshToken=user.generateRefreshToken()
+        user.refreshToken=refreshToken // Storing the refresh token in the user document in database
+        await user.save({validateBeforeSave:false}) // Saving the user document with the new refresh token,validateBeforeSave:false means that the validation will not be performed before saving the document, which is useful when we are updating a field that does not require validation, like refreshToken in this case,we dont need password validation here
+       return { accessToken, refreshToken }
+    }catch(error){
+        throw new ApiError(500,"Something went wrong while generating access and refresh token")
+    }
+   
+
+ } 
 
 const registerUser=asyncHandler( async (req,res)=>{ // This is an example of an async function wrapped in asyncHandler
    // return res.status(200).json({ // Sending a JSON response with status 200
@@ -84,4 +99,80 @@ const registerUser=asyncHandler( async (req,res)=>{ // This is an example of an 
 } 
 )
 
-export {registerUser}
+const loginUser=asynHandle(async (req,res)=>{
+   //Process for login
+   //take username and password from fronted  //req.body->data
+   //validate username and password          //username or email
+   //check user exist in the database or not   //find the user 
+                                              //password check
+   //if valid user generate access and refresh token   
+   //send these token to the cookies
+
+
+   const {username,email,password}=req.body
+
+   if(!(email || username)){  //if both email and username field are blank
+      throw new ApiError(400,"Email or username is required for the login")
+   }
+
+  const user= await User.findOne({
+      $or:[{username},{email}]
+   })
+
+   if(!user){
+      throw new ApiError(404,"User not found")
+   }
+
+   const ispasswordvalid=await isPasswordCorrect(password)
+
+   if(!ispasswordvalid){
+      throw new ApiError(401,"Wrong password")
+   }
+
+   const {accessToken,refreshToken}= await generateaccessandrefreshToken(user._id) // Generating access and refresh token for the user
+
+   const loggedInUser=await User.findById(user._id).select("-password -refreshToken") // Fetching the user details without password and refreshToken from the database
+
+   //Now we will sending the cookies
+   const options={ //Options is a object 
+      httpOnly:true, //cookies can be modified by the server only, not by the client side scripts
+      secure:true 
+   }
+
+   return res.status(200)
+   .cookie("accessToken",accessToken,options) // Setting the access token in the cookies
+   .cookie("refreshToken",refreshToken,options) // Setting the refresh token in the cookies
+   .json(
+      new ApiResponse(200,{
+         user:loggedInUser,accessToken,refreshToken, // Sending the logged-in user details, access token, and refresh token in the response
+
+      },
+   "User logged in successfully" // Success message)
+   )
+)
+}) 
+
+const logoutUser=asyncHandler(async(req,res)=>{ 
+   await User.findByIdAndUpdate(req.user._id ,{
+       $set:{
+         refreshToken:undefined // Setting the refresh token to undefined in the user document to log out the user
+       }
+   },
+{
+   new :true, // Returning the updated user document
+})
+
+  const options={
+      httpOnly:true, // Cookies can be modified by the server only, not by the client side scripts
+      secure:true, // Cookies will only be sent over HTTPS}
+  }
+
+  return res.status(200)
+  .clearCookie("accessToken",options) // Clearing the access token cookie
+   .clearCookie("refreshToken",options) // Clearing the refresh token cookie
+   .json(new ApiResponse(200,{},"User logged out successfully")) // Sending a success message in the response
+})
+
+
+
+export {registerUser,loginUser,logoutUser} 
