@@ -5,7 +5,7 @@ app.use(cors({  //configure CORS to allow requests from origin
     credentials: true
 }))
 
-app.use(express.json({limit:'16kb'})); // Middleware to parse JSON bodies,taking care of JSON data in requests
+
 
 app.use(express.urlencoded({extended:true,limit:'16kb'})); // Middleware to parse URL-encoded bodies,taking care of form data in requests
 

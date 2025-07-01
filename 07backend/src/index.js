@@ -22,6 +22,8 @@ connectDB()
   console.error("ERORR TO CONNECT",error);
 })
 
+app.use(express.json({limit:'16kb'})); // Middleware to parse JSON bodies,taking care of JSON data in requests
+
 // Importing routes
 import { userRouter } from './routes/user.routes.js';  
 
