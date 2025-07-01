@@ -1,6 +1,6 @@
 import mongoose,{Schema} from 'mongoose';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcryptjs'; 
 
 const userSchema=new Schema({
  username:{
@@ -31,7 +31,7 @@ const userSchema=new Schema({
     required:true
  },
 
- coverimage:{
+ coverImage:{
     type:String
  },
 

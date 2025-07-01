@@ -21,16 +21,16 @@ const registerUser=asyncHandler( async (req,res)=>{ // This is an example of an 
    //remove password and refresh token from respose
    //check for user creation 
    //return response
-
+ //  console.log("req.body",req.body) 
    const {username,email,fullName,password}=req.body // Destructuring the request body to get user details from frontend
-   console.log("email",email);
+  // console.log("email",email);
 
    if([username,email,fullName,password].some((field)=>field?.trim()==="")){
       throw new ApiError(400,"All fields are required") 
    }
 
    //Check if user already exists
-   const existedUser=User.findOne({
+   const existedUser=await User.findOne({
       $or:[{username},{email}] // Using $or operator to check if either username or email already exists in the database
    })
 
@@ -38,9 +38,15 @@ const registerUser=asyncHandler( async (req,res)=>{ // This is an example of an 
       throw new ApiError(409,"User already exists with this username or email") // Throwing an error if user already exists
    }
 
+  // console.log("req.files",req.files) 
   const avatarLocalPath= req.files?.avatar[0]?.path //req.files give access to the uploaded files, checking if avatar is uploaded,avatar[0] gives access to the first file in the avatar array, and path gives the path of the uploaded file
 
-   const coverImageLocalPath= req.files?.coverImage[0]?.path
+   //const coverImageLocalPath= req.files?.coverImage[0]?.path
+   //we can write upper line with check if coverImage is exist or not
+   let coverImageLocalPath;
+   if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+      coverImageLocalPath=req.files.coverImage[0].path // If cover image is uploaded, getting the path of the first file in the coverImage array
+   }
   
    if(!avatarLocalPath){
       throw new ApiError(400,"Avatar is required") // Throwing an error if avatar is not uploaded
@@ -58,6 +64,7 @@ const registerUser=asyncHandler( async (req,res)=>{ // This is an example of an 
       username:username.toLowerCase(),
       email,
       fullName,
+      password,
       avatar:avatar.url, // Storing the URL of the uploaded avatar image
       coverImage:coverImage?.url ||"", // Storing the URL of the uploaded cover image, if not uploaded, storing an empty string
 
