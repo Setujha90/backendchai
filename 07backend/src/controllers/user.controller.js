@@ -110,19 +110,26 @@ const loginUser = asyncHandler(async (req, res) => {
    //if valid user generate access and refresh token   
    //send these token to the cookies
 
-   const {username, email, password} = req.body
-   console.log("email",email);
+   // const {username, email, password} = req.body
+   // console.log("email",email);
+
+   // if (!password) {
+   //    throw new ApiError(400, "Password is required")
+   // }
+
+   // if (!(username || email)) {  //if both email and username field are blank
+   //    throw new ApiError(400, "Email or username is required for login")
+   // }
+   const {indentifier, password} = req.body
+   if (!indentifier) {  
+      throw new ApiError(400, "Email or username is required for login")
+   }
 
    if (!password) {
       throw new ApiError(400, "Password is required")
    }
-
-   if (!(username || email)) {  //if both email and username field are blank
-      throw new ApiError(400, "Email or username is required for login")
-   }
-
    const user = await User.findOne({
-      $or: [{username}, {email}]
+      $or: [{username:indentifier}, {email:indentifier}] 
    })
 
    if (!user) {
