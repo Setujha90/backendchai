@@ -21,7 +21,7 @@ connectDB()
     })
 })
 .catch((error)=>{
-  console.error("ERORR TO CONNECT",error);
+console.error("ERORR TO CONNECT",error);
 })
 
 // Importing routes

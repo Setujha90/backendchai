@@ -2,10 +2,10 @@ import mongoose,{Schema} from 'mongoose';
 import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';  //it is used to paginate the results of an aggregation query
 
 const videoSchema=new Schema({
-   videoFile:{
+videoFile:{
        type:String,   //URL from cloudinary service
-       required:true
-   },
+    required:true
+},
 
     thumbnail:{
         type:String,
@@ -14,7 +14,7 @@ const videoSchema=new Schema({
     title:{
         type:String,
         required:true,
-      
+    
     },
     description:{
         type:String, 

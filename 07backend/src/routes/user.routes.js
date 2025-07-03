@@ -1,5 +1,5 @@
 import {Router} from "express"
-import { registerUser,loginUser,logoutUser,refreshAccessToken,changeCurrentPassword,getCurrentUser,updateAccountDetails,updateUserAvatar,updateUserCoverImage} from "../controllers/user.controller.js"
+import { registerUser,loginUser,logoutUser,refreshAccessToken,changeCurrentPassword,getCurrentUser,updateAccountDetails,updateUserAvatar,updateUserCoverImage,getUserChannelProfile,getWatchHistory} from "../controllers/user.controller.js"
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 
@@ -7,8 +7,8 @@ const router=Router()
 
 router.post('/register', upload.fields([  // Using multer middleware to handle file uploads, allowing multiple files with specified field names ,jaate jaate middleware se mil ke jana h
     { name: 'avatar', maxCount: 1 }, //accepting the avatar image with a maximum count of 1
-     { name: 'coverImage', maxCount: 1 }])
-     , registerUser)
+    { name: 'coverImage', maxCount: 1 }])
+    , registerUser)
 
 // Above api call can be written in one more way
 // router.route('/register').post(upload.fields([
@@ -31,5 +31,8 @@ router.route('/updateavatar')
 
 router.route('/updatecoverimage')
     .patch(verifyJWT, upload.single('coverImage'), updateUserCoverImage) 
+
+router.route('/channelprofile/:username').get(verifyJWT, getUserChannelProfile)
+router.route('/watchhistory').get(verifyJWT, getWatchHistory) 
 
 export {router as userRouter}

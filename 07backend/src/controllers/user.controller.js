@@ -7,6 +7,8 @@ import jwt from "jsonwebtoken";
 import { app } from "../index.js";
 import bcrypt from "bcryptjs";
 
+import mongoose from "mongoose";
+
 //Create function to generate access and refresh token
 const generateaccessandrefreshToken=async(user)=>{
    try{
@@ -236,9 +238,9 @@ const loginUser = asyncHandler(async (req, res) => {
 
 const logoutUser=asyncHandler(async (req,res)=>{ 
    await User.findByIdAndUpdate(req.user._id ,{
-       $set:{
+      $set:{
          refreshToken:undefined // Setting the refresh token to undefined in the user document to log out the user
-       }
+      }
    },
 {
    new :true, // Returning the updated user document
@@ -247,9 +249,9 @@ const logoutUser=asyncHandler(async (req,res)=>{
    const options={
       httpOnly:true, // Cookies can be modified by the server only, not by the client side scripts
       secure:true, // Cookies will only be sent over HTTPS}
-  }
+}
 
-  return res.status(200)
+return res.status(200)
    .clearCookie("accessToken",options) // Clearing the access token cookie
    .clearCookie("refreshToken",options) // Clearing the refresh token cookie
    .json(new ApiResponse(200,{},"User logged out successfully")) // Sending a success message in the response
@@ -371,35 +373,35 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 const updateUserAvatar = asyncHandler(async (req, res) => {
    
     if (!req.file || !req.file.path) { // Checking if the avatar file is uploaded and its path is available
-        throw new ApiError(400, "Please provide an avatar image")
-    }
+      throw new ApiError(400, "Please provide an avatar image")
+   }
 
     const avatarLocalPath = req.file.path // Getting the local path of the uploaded avatar image
 
-    
+   
     const avatar = await uploadOnCloudinary(avatarLocalPath) // Uploading the avatar image to Cloudinary and awaiting the response
-    if (!avatar?.url) {
-        throw new ApiError(400, "Error while uploading avatar on cloudinary")
-    }
+   if (!avatar?.url) {
+      throw new ApiError(400, "Error while uploading avatar on cloudinary")
+   }
 
-    const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
+   const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
             $set: { avatar: avatar.url } // Updating the user document with the new avatar URL
-        },
-        { new: true }
-    ).select("-password -refreshToken")
+      },
+      { new: true }
+   ).select("-password -refreshToken")
 
-    if (!user) {
-        throw new ApiError(404, "User not found")
-    }
+   if (!user) {
+      throw new ApiError(404, "User not found")
+   }
 
-    return res.status(200)
-        .json(new ApiResponse(
+   return res.status(200)
+      .json(new ApiResponse(
             200,
             { user },
             "Avatar updated successfully"
-        ))
+      ))
 })
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -435,4 +437,126 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         ))
 })
 
-export {registerUser,loginUser,logoutUser,refreshAccessToken,changeCurrentPassword,getCurrentUser,updateAccountDetails,updateUserAvatar,updateUserCoverImage}
+const getUserChannelProfile = asyncHandler(async (req,res)=>{
+   const {username} = req.params
+   if(!username?.trim){
+      throw new ApiError(400, "Username is missing")
+   } 
+
+   User.find({username}) // Finding the user by username,but we are not using it here
+   const channel = await User.aggregate([
+      {
+         $match: {username: username.toLowerCase().trim()} // Matching the user by username, converting it to lowercase and trimming any whitespace
+      },
+      {
+         $lookup: {
+            from:"subscriptions", // Joining the subscriptions collection to get the subscribers of the channel
+            localField:"_id", // Local field is the _id of the user document
+            foreignField:"channel", // Foreign field is the channel field in the subscriptions collection
+            as:"subscribers" // Joining the subscriptions collection to get the subscribers of the channel
+         } 
+      },
+      {
+         $lookup: {
+            from:"subscriptions", 
+            localField:"_id", 
+            foreignField:"subscriber", // Foreign field is the subscriber field in the subscriptions collection
+            as:"subscribedTo" // Joining the subscriptions collection to get the channels that the user is subscribed to
+         }
+      },
+      {
+         $addFields: {
+            subscribersCount: { $size: "$subscribers" }, // Adding a new field subscribersCount to the user document which is the size of the subscribers array $subscribers is used because it is field now
+            channelsSubscribedToCount: { $size: "$subscribedTo" },
+            isSubscribed: {
+               $cond: {
+                  if: {$in: [req.user?._id, "$subscribers.subscriber"]}, // Checking if the user is subscribed to the channel
+                  then: true, // If the user is subscribed to the channel, then isSubscribed is true
+                  else: false // If the user is not subscribed to the channel, then isSubscribed is false
+                  
+               }
+            }
+               
+                  
+         }
+      },
+      {
+         $project: { // Projecting the fields that we want to return in the response
+            username: 1, // Including the username field in the response
+            fullName: 1,
+            subscribersCount: 1,
+            channelsSubscribedToCount: 1,
+            isSubscribed: 1,
+            avatar: 1,
+            coverImage: 1,
+            email: 1
+            //including the field as 1 means that we want to include this field in the response
+         }
+      }
+   ])
+   //console.log("channel", channel)
+   if(!channel?.length){ //it means that channel length is 0,so channel is not found
+      throw new ApiError(404,"Channel not found")
+   } 
+   return res.status(200).json(new ApiResponse(
+      200,
+      { channel: channel[0] },
+      "Channel profile fetched successfully"
+   ))
+
+
+})
+
+const getWatchHistory = asyncHandler(async (req, res)=>{
+   const user = await User.aggregate([
+      {
+         $match: {_id: new mongoose.Types.ObjectId(req.user._id)} // Matching the user by id ,first converting the req.user._id to ObjectId type (in  this type it is store in the database)
+      },
+      {
+         $lookup: {
+            from: "videos", // Joining the videos collection to get the watch history of the user
+            localField: "watchHistory", // Local field is the watchHistory field in the user document
+            foreignField: "_id",
+            as: "watchHistory", 
+            pipeline: [  // Using pipeline to filter the videos and get only the required fields
+               {
+                  $lookup: { //nested lookup to get the owner of the video
+                     from: "users",
+                     localField: "owner",
+                     foreignField: "_id",
+                     as: "owner",
+                     pipeline: [ // Using pipeline to filter the user and get only the required fields
+                        {
+                           $project: { // Projecting the fields that we want to return in the response in the owner field
+                              fullName: 1,
+                              username: 1,
+                              avatar: 1
+                           }
+                        }
+                     ]
+                  }
+               },
+               {
+                  $addFields: {
+                     owner: {$arrayElemAt: ["$owner", 0]} // Adding a new field owner to the video document which is the first element of the owner array, because we are using $lookup to join the users collection and it returns an array of users, so we are taking the first element of the array
+                  }
+               }
+            ]
+         }
+      }
+   ])
+
+   console.log("user", user) 
+
+   // if(!user?.length || !user[0]?.watchHistory?.length){
+   //    throw new ApiError(404,"Watch history not found")
+   // }
+
+   return res.status(200).json(new ApiResponse(
+      200,
+      { watchHistory: user[0].watchHistory }, // Returning the watch history of the user ,user[0] is used because we are using $match to match the user by id and it returns an array of users, so we are taking the first element of the array
+      "Watch history fetched successfully"
+   ))
+})
+
+export {registerUser,loginUser,logoutUser,refreshAccessToken,changeCurrentPassword,getCurrentUser,updateAccountDetails,updateUserAvatar,updateUserCoverImage,getUserChannelProfile,getWatchHistory}
