@@ -5,22 +5,22 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { app } from "../index.js";
+import bcrypt from "bcryptjs";
 
 //Create function to generate access and refresh token
- const generateaccessandrefreshToken=async(userId)=>{
-    try{
-       const user= await User.findById(userId)
-       const accessToken=user.generateAccessToken()
-       const refreshToken=user.generateRefreshToken()
-        user.refreshToken=refreshToken // Storing the refresh token in the user document in database
-        await user.save({validateBeforeSave:false}) // Saving the user document with the new refresh token,validateBeforeSave:false means that the validation will not be performed before saving the document, which is useful when we are updating a field that does not require validation, like refreshToken in this case,we dont need password validation here
-       return { accessToken, refreshToken }
-    }catch(error){
-        throw new ApiError(500,"Something went wrong while generating access and refresh token")
-    }
+const generateaccessandrefreshToken=async(user)=>{
+   try{
+      const accessToken=user.generateAccessToken()
+      const refreshToken=user.generateRefreshToken()
+      user.refreshToken=refreshToken // Storing the refresh token in the user document in database
+      await user.save({validateBeforeSave:false}) // Saving the user document with the new refresh token,validateBeforeSave:false means that the validation will not be performed before saving the document, which is useful when we are updating a field that does not require validation, like refreshToken in this case,we dont need password validation here
+      return { accessToken, refreshToken }
+   }catch(error){
+      throw new ApiError(500,"Something went wrong while generating access and refresh token")
+   }  
    
 
- } 
+} 
 
 const registerUser=asyncHandler( async (req,res)=>{ // This is an example of an async function wrapped in asyncHandler
    // return res.status(200).json({ // Sending a JSON response with status 200
@@ -120,50 +120,119 @@ const loginUser = asyncHandler(async (req, res) => {
    // if (!(username || email)) {  //if both email and username field are blank
    //    throw new ApiError(400, "Email or username is required for login")
    // }
-   const {indentifier, password} = req.body
-   if (!indentifier) {  
-      throw new ApiError(400, "Email or username is required for login")
+
+   // body: {
+   //    entity: {
+   //       indentifier: "Email or Username"
+   //       data: "credentials"
+   //    }
+   //    password: "User Password"
+   // }
+
+   const {entity: {indentifier, data}, password} = req.body
+   if(!indentifier || !data){
+      throw new ApiError(400, "Email or username is required")
+   }
+   if(!password){
+      throw new ApiError(400,"Password is required")
+   }
+   
+   let user
+   if(indentifier.toString().toLowerCase().trim() === "email") {
+      user = await User.findOne({
+         email: data
+      })
+   }
+   else if(indentifier.toString().toLowerCase().trim() === "username") {
+      user = await User.findOne({
+         username: data
+      })
    }
 
-   if (!password) {
-      throw new ApiError(400, "Password is required")
+   if(!user){
+      throw new ApiError(400, "Invalid credential")
    }
-   const user = await User.findOne({
-      $or: [{username:indentifier}, {email:indentifier}] 
+
+   const isvalidpassword = await bcrypt.compare(password, user.password)
+   if(!isvalidpassword){
+      throw new ApiError(400, "Invalid credential")
+   }
+
+   const {accessToken, refreshToken} = await generateaccessandrefreshToken(user)
+
+   res.status(200)
+   .cookie("accessToken", accessToken)
+   .cookie("refreshToken", refreshToken)
+   .json({
+      message:"User successfullly logged in"
    })
-
-   if (!user) {
-      throw new ApiError(404, "User not found")
-   }
-
-   const isPasswordValid = await user.isPasswordCorrect(password)
-
-   if (!isPasswordValid) {
-      throw new ApiError(401, "Invalid credentials")
-   }
-
-   const {accessToken, refreshToken} = await generateaccessandrefreshToken(user._id)  // Generating access and refresh token for the user
-   const loggedInUser = await User.findById(user._id).select("-password -refreshToken") // Fetching the user details without password and refreshToken from the database
-   const options = { //optons are object that contains the options for the cookies
-      httpOnly: true,  //cookies can be modified by the server only, not by the client side scripts
-      secure: true
-   }
-
-   return res.status(200)
-   .cookie("accessToken", accessToken, options) // Setting the access token in the cookie with options
-   .cookie("refreshToken", refreshToken, options) // Setting the refresh token in the cookie with options
-   .json(
-      new ApiResponse(
-         200,
-         {
-            user: loggedInUser,
-            accessToken,
-            refreshToken
-         },
-         "User logged in successfully"
-      )
-   )
+   return;
 }) 
+
+// const loginUser = asyncHandler(async (req, res) => {
+//    //Process for login
+//    //take username and password from fronted  //req.body->data
+//    //validate username and password          //username or email
+//    //check user exist in the database or not   //find the user 
+//                                               //password check
+//    //if valid user generate access and refresh token   
+//    //send these token to the cookies
+
+//    // const {username, email, password} = req.body
+//    // console.log("email",email);
+
+//    // if (!password) {
+//    //    throw new ApiError(400, "Password is required")
+//    // }
+
+//    // if (!(username || email)) {  //if both email and username field are blank
+//    //    throw new ApiError(400, "Email or username is required for login")
+//    // }
+//    const {indentifier, password} = req.body
+//    if (!indentifier) {  
+//       throw new ApiError(400, "Email or username is required for login")
+//    }
+
+//    if (!password) {
+//       throw new ApiError(400, "Password is required")
+//    }
+//    const user = await User.findOne({
+//       $or: [{username:indentifier}, {email:indentifier}] 
+//    })
+
+//    if (!user) {
+//       throw new ApiError(404, "User not found")
+//    }
+
+//    const isPasswordValid = await user.isPasswordCorrect(password)
+
+//    if (!isPasswordValid) {
+//       throw new ApiError(401, "Invalid credentials")
+//    }
+
+//    const {accessToken, refreshToken} = await generateaccessandrefreshToken(user._id)  // Generating access and refresh token for the user
+//    const loggedInUser = await User.findById(user._id).select("-password -refreshToken") // Fetching the user details without password and refreshToken from the database
+//    const options = { //optons are object that contains the options for the cookies
+//       httpOnly: true,  //cookies can be modified by the server only, not by the client side scripts
+//       secure: true
+//    }
+
+//    return res.status(200)
+//    .cookie("accessToken", accessToken, options) // Setting the access token in the cookie with options
+//    .cookie("refreshToken", refreshToken, options) // Setting the refresh token in the cookie with options
+//    .json(
+//       new ApiResponse(
+//          200,
+//          {
+//             user: loggedInUser,
+//             accessToken,
+//             refreshToken
+//          },
+//          "User logged in successfully"
+//       )
+//    )
+// }) 
+
 
 const logoutUser=asyncHandler(async (req,res)=>{ 
    await User.findByIdAndUpdate(req.user._id ,{

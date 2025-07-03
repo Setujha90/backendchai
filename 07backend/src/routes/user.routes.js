@@ -10,7 +10,7 @@ router.post('/register', upload.fields([  // Using multer middleware to handle f
      { name: 'coverImage', maxCount: 1 }])
      , registerUser)
 
-// //Above api call can be written in one more way
+// Above api call can be written in one more way
 // router.route('/register').post(upload.fields([
 //     { name: 'avatar', maxCount: 1 }, //accepting the avatar image with a maximum count of 1
 //      { name: 'coverImage', maxCount: 1 }]), registerUser) // Register route
