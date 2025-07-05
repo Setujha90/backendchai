@@ -3,56 +3,56 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs'; 
 
 const userSchema=new Schema({
- username:{
-    type:String,
-    required:true,
-    unique:true,
-    lowercase:true,
-    trim:true,
-    index:true //helps in searching for users by username
- },
- email:{
-    type:String,
-    required:true,
-    unique:true,
-    lowercase:true,
-    trim:true 
- },
+username:{
+   type:String,
+   required:true,
+   unique:true,
+   lowercase:true,
+   trim:true,
+   index:true //helps in searching for users by username
+},
+email:{
+   type:String,
+   required:true,
+   unique:true,
+   lowercase:true,
+   trim:true 
+},
 
- fullName:{
-    type:String,
-    required:true,
-    trim:true,
-    lowercase:true
- },
- 
- avatar:{
-    type:String, //take URL of the avatar image using cloudinary service
-    required:true
- },
+fullName:{
+   type:String,
+   required:true,
+   trim:true,
+   lowercase:true
+},
 
- coverImage:{
-    type:String
- },
+avatar:{
+   type:String, //take URL of the avatar image using cloudinary service
+   required:true
+},
 
- watchhistory:[{
-    type:mongoose.Schema.Types.ObjectId,
-    ref:"Video"
- }],
+coverImage:{
+   type:String
+},
 
- password:{
-    type:String,
-    required:[true,"Password is required"]
- },
+watchhistory:[{
+   type:mongoose.Schema.Types.ObjectId,
+   ref:"Video"
+}],
 
- refreshToken:{
-    type:String,
- }
+password:{
+   type:String,
+   required:[true,"Password is required"]
+},
+
+refreshToken:{
+   type:String,
+}
 
 
 },
 {
-    timestamps:true
+   timestamps:true
 }
 
 
@@ -65,20 +65,20 @@ userSchema.pre('save',async function(next){ //pre is the hook that runs before s
 })
 
 userSchema.methods.isPasswordCorrect = async function(password) {
-    if (!password) return false;
-    return await bcrypt.compare(password, this.password);
+   if (!password) return false;
+   return await bcrypt.compare(password, this.password);
 }
 
 userSchema.methods.generateAccessToken= function(){ //method to generate access token
-    return jwt.sign({
-        _id:this._id,
-        email:this.email,
-        username:this.username,
-        fullName:this.fullName,
-    },process.env.ACCESS_TOKEN_SECRET,{expiresIn:process.env.ACCESS_TOKEN_EXPIRY});
+   return jwt.sign({
+      _id:this._id,
+      email:this.email,
+      username:this.username,
+      fullName:this.fullName,
+   },process.env.ACCESS_TOKEN_SECRET,{expiresIn:process.env.ACCESS_TOKEN_EXPIRY});
 }
 
 userSchema.methods.generateRefreshToken= function(){ //method to generate refresh token
-    return jwt.sign({_id:this._id},process.env.REFRESH_TOKEN_SECRET,{expiresIn:process.env.REFRESH_TOKEN_EXPIRY});
+   return jwt.sign({_id:this._id},process.env.REFRESH_TOKEN_SECRET,{expiresIn:process.env.REFRESH_TOKEN_EXPIRY});
 }
 export const User=mongoose.model('User',userSchema);
